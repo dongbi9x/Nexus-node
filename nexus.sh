@@ -1,35 +1,35 @@
 #!/bin/bash
-# 设置颜色变量
+# Thiết lập biến màu sắc
 GREEN="\033[32m"
 RED="\033[31m"
 RESET="\033[0m"
 
-# 检查是否为 Ubuntu 系统
+# Kiểm tra xem hệ thống có phải là Ubuntu không
 if ! grep -q "Ubuntu" /etc/os-release; then
-    echo -e "${RED}错误：此脚本仅支持 Ubuntu 系统${RESET}"
+    echo -e "${RED}Lỗi: Script này chỉ hỗ trợ hệ thống Ubuntu${RESET}"
     exit 1
 fi
 
-# 安装基本依赖
+# Cài đặt các phụ thuộc cơ bản
 if ! command -v screen &> /dev/null; then
-    echo -e "${GREEN}正在安装 screen...${RESET}"
+    echo -e "${GREEN}Đang cài đặt screen...${RESET}"
     sudo apt update && sudo apt install -y screen
 fi
 
-# 创建状态文件目录
+# Tạo thư mục trạng thái
 mkdir -p ~/.nexus_status
 
-# 显示菜单函数
+# Hiển thị menu
 show_menu() {
-    echo -e "${GREEN}欢迎使用 Nexus 一键安装脚本：${RESET}"
-    echo "1、安装依赖环境"
-    echo "2、查看依赖安装进度"
-    echo "3、启动 Nexus-CLI"
-    echo "4、查看 Nexus-CLI 运行状态"
-    echo "q、退出脚本"
+    echo -e "${GREEN}Chào mừng bạn đến với script cài đặt Nexus:${RESET}"
+    echo "1. Cài đặt môi trường phụ thuộc"
+    echo "2. Xem tiến trình cài đặt phụ thuộc"
+    echo "3. Khởi động Nexus-CLI"
+    echo "4. Xem trạng thái chạy của Nexus-CLI"
+    echo "q. Thoát script"
 }
 
-# 检查依赖安装状态
+# Kiểm tra trạng thái cài đặt phụ thuộc
 check_deps_status() {
     if [ -f ~/.nexus_status/deps_installed ]; then
         return 0
@@ -37,86 +37,86 @@ check_deps_status() {
     return 1
 }
 
-# 安装依赖环境
+# Cài đặt môi trường phụ thuộc
 install_deps() {
     if check_deps_status; then
-        echo -e "${GREEN}依赖环境已安装完成，无需重复安装${RESET}"
+        echo -e "${GREEN}Môi trường phụ thuộc đã được cài đặt, không cần cài đặt lại${RESET}"
         return
     fi
 
-    echo -e "${GREEN}开始安装依赖环境...${RESET}"
+    echo -e "${GREEN}Bắt đầu cài đặt môi trường phụ thuộc...${RESET}"
 
-    # 删除所有名为 nexus_deps 的会话
+    # Xóa tất cả các session có tên nexus_deps
     screen -ls | grep "nexus_deps" | awk '{print $1}' | xargs -r screen -S {} -X quit
 
-    # 创建新的 screen 会话
+    # Tạo session screen mới
     screen -dmS nexus_deps bash -c '
-        # 启用错误追踪
+        # Bật theo dõi lỗi
         set -x
 
-        echo "正在安装系统依赖..."
+        echo "Đang cài đặt các phụ thuộc hệ thống..."
         sudo apt update
         sudo apt install -y build-essential pkg-config libssl-dev git-all
         echo "y" | sudo apt install protobuf-compiler
 
-        echo "正在安装 Rust..."
+        echo "Đang cài đặt Rust..."
         curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
         source "$HOME/.cargo/env"
 
-        # 标记依赖安装完成
+        # Đánh dấu hoàn thành cài đặt phụ thuộc
         touch ~/.nexus_status/deps_installed
-        echo "依赖环境安装完成！"
+        echo "Cài đặt môi trường phụ thuộc hoàn tất!"
     '
     
-    echo -e "${GREEN}依赖安装已在后台启动${RESET}"
-    echo -e "${GREEN}请打开新的终端窗口，执行以下命令查看安装进度：${RESET}"
+    echo -e "${GREEN}Cài đặt phụ thuộc đã được khởi động trong nền${RESET}"
+    echo -e "${GREEN}Vui lòng mở cửa sổ terminal mới và chạy lệnh sau để xem tiến trình:${RESET}"
     echo -e "screen -r nexus_deps"
-    echo -e "${GREEN}使用 Ctrl+A+D 组合键可以退出会话${RESET}"
+    echo -e "${GREEN}Sử dụng tổ hợp phím Ctrl+A+D để thoát session${RESET}"
 }
 
-# 查看依赖安装进度
+# Xem tiến trình cài đặt phụ thuộc
 check_deps_progress() {
     if check_deps_status; then
-        echo -e "${GREEN}依赖环境已安装完成！${RESET}"
+        echo -e "${GREEN}Môi trường phụ thuộc đã được cài đặt hoàn tất!${RESET}"
         return
     fi
 
     if ! screen -list | grep -q "nexus_deps"; then
-        echo -e "${RED}依赖安装会话未运行，请先执行选项1${RESET}"
+        echo -e "${RED}Session cài đặt phụ thuộc không tồn tại, vui lòng chọn tùy chọn 1 trước${RESET}"
         return
     fi
 
-    echo -e "${GREEN}正在连接到依赖安装会话...${RESET}"
-    echo -e "${GREEN}提示：使用 Ctrl+A+D 组合键可以退出会话${RESET}"
+    echo -e "${GREEN}Đang kết nối đến session cài đặt phụ thuộc...${RESET}"
+    echo -e "${GREEN}Gợi ý: Sử dụng tổ hợp phím Ctrl+A+D để thoát session${RESET}"
     sleep 2
-    # 使用 script 创建伪终端并连接到 screen 会话
+    # Sử dụng script để tạo pseudo terminal và kết nối đến session screen
     script -q -f -c "screen -r nexus_deps" /dev/null
 }
 
-# 启动 Nexus-CLI
+# Khởi động Nexus-CLI
 start_cli() {
     if ! check_deps_status; then
-        echo -e "${RED}请先完成依赖环境的安装（选项1）${RESET}"
+        echo -e "${RED}Vui lòng hoàn tất cài đặt môi trường phụ thuộc trước (tùy chọn 1)${RESET}"
         return
     fi
 
     if screen -list | grep -q "nexus_cli"; then
-        echo -e "${RED}Nexus-CLI 已在运行中，请勿重复启动${RESET}"
+        echo -e "${RED}Nexus-CLI đang chạy, vui lòng không khởi động lại${RESET}"
         return
     fi
 
-    # 获取用户输入的 Prover ID
-    read -p "请输入您的 Prover ID: " prover_id < /dev/tty
+    # Nhập Prover ID từ người dùng
+    read -p "Vui lòng nhập Prover ID của bạn: " prover_id < /dev/tty
     if [ -z "$prover_id" ]; then
-        echo -e "${RED}Prover ID 不能为空${RESET}"
+        echo -e "${RED}Prover ID không được để trống${RESET}"
         return
     fi
 
-    echo -e "${GREEN}正在启动 Nexus-CLI...${RESET}"
+    echo -e "${GREEN}Đang khởi động Nexus-CLI...${RESET}"
     
-    # 创建新的 screen 会话运行 CLI
+    # Tạo session screen mới để chạy CLI
     screen -dmS nexus_cli bash -c '
-        # 自动同意协议并输入 Prover ID
+        # Tự động đồng ý thỏa thuận và nhập Prover ID
         {
             sleep 2
             echo "y"
@@ -125,27 +125,27 @@ start_cli() {
         } | curl https://cli.nexus.xyz/ | sh
     '
     
-    echo -e "${GREEN}Nexus-CLI 已在后台启动，使用选项4查看运行状态${RESET}"
+    echo -e "${GREEN}Nexus-CLI đã được khởi động trong nền, sử dụng tùy chọn 4 để xem trạng thái${RESET}"
 }
 
-# 查看 CLI 运行状态
+# Xem trạng thái chạy của CLI
 check_cli_status() {
     if ! screen -list | grep -q "nexus_cli"; then
-        echo -e "${RED}Nexus-CLI 未运行，请先执行选项3${RESET}"
+        echo -e "${RED}Nexus-CLI không chạy, vui lòng chọn tùy chọn 3 trước${RESET}"
         return
     fi
 
-    echo -e "${GREEN}正在连接到 Nexus-CLI 会话...${RESET}"
-    echo -e "${GREEN}提示：使用 Ctrl+A+D 组合键可以退出会话${RESET}"
+    echo -e "${GREEN}Đang kết nối đến session Nexus-CLI...${RESET}"
+    echo -e "${GREEN}Gợi ý: Sử dụng tổ hợp phím Ctrl+A+D để thoát session${RESET}"
     sleep 2
-    # 使用 script 创建伪终端并连接到 screen 会话
+    # Sử dụng script để tạo pseudo terminal và kết nối đến session screen
     script -q -f -c "screen -r nexus_cli" /dev/null
 }
 
-# 主循环
+# Vòng lặp chính
 show_menu
 while true; do
-    read -p "请输入选项 [1-4 或 q]: " choice < /dev/tty
+    read -p "Vui lòng nhập tùy chọn [1-4 hoặc q]: " choice < /dev/tty
     case $choice in
         1)
             install_deps
@@ -160,13 +160,13 @@ while true; do
             check_cli_status
             ;;
         q|Q)
-            echo -e "${GREEN}感谢使用！${RESET}"
+            echo -e "${GREEN}Cảm ơn bạn đã sử dụng!${RESET}"
             exit 0
             ;;
         *)
-            echo -e "${RED}无效的选项${RESET}"
+            echo -e "${RED}Tùy chọn không hợp lệ${RESET}"
             ;;
     esac
     echo
     show_menu
-done 
+done
