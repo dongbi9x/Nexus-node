@@ -11,7 +11,7 @@ TEMP_DIR=$(mktemp -d)
 cd "$TEMP_DIR"
 
 # Tải xuống script chính
-curl -fsSL https://raw.githubusercontent.com/baalisgood/nexus-node/main/nexus.sh -o nexus.sh
+curl -fsSL https://raw.githubusercontent.com/dongbi9x/nexus-node/main/nexus.sh -o nexus.sh
 chmod +x nexus.sh
 
 # Chạy script chính
